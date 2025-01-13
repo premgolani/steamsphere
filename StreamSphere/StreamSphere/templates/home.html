@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="home-container">
+    <div class="filter-container">
+        <select id="timeFilter" onchange="filterVideos(this.value)">
+            <option value="recent" {% if current_sort == 'recent' %}selected{% endif %}>Most Recent</option>
+            <option value="loved" {% if current_sort == 'loved' %}selected{% endif %}>Most Loved</option>
+            <option value="all" {% if current_sort == 'all' %}selected{% endif %}>All Time</option>
+        </select>
+    </div>
+
+    
+    <div class="video-grid">
+        {% for video in videos %}
+        <div class="video-card" data-video-id="{{ video._id }}">
+            <div class="thumbnail-container">
+                <div class="video-wrapper">
+                    <video class="video-player" loop muted playsinline poster="{{ video.thumbnail_url }}">
+                        <source src="{{ video.video_url }}" type="video/mp4">
+                    </video>
+                </div>
+                <div class="video-overlay">
+                    <div class="video-info">
+                        <h3>{{ video.title }}</h3>
+                        <p>{{ video.username }}</p>
+                        <div class="video-stats">
+                            <button class="like-btn {% if current_user.is_authenticated and current_user.id in video.likes %}liked{% endif %}" onclick="handleLike('{{ video._id }}')">
+                                <i class="fas fa-heart"></i>
+                                <span class="count">{{ video.likes|length }}</span>
+                            </button>
+                            <button class="comment-btn" onclick="openCommentModal('{{ video._id }}')">
+                                <i class="fas fa-comment"></i>
+                                <span class="count">{{ video.comments|length }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+<div id="commentsModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Comments</h2>
+        <div class="comments-container">
+            <div id="commentsList"></div>
+        </div>
+        {% if current_user.is_authenticated %}
+        <form id="commentForm">
+            <input type="text" id="commentInput" placeholder="Write a comment...">
+            <button type="submit">Post</button>
+        </form>
+        {% else %}
+        <p>Please <a href="#" onclick="openAuthModal('login')">login</a> to comment</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function filterVideos(filter) {
+        window.location.href = `/?sort=${filter}`;
+    }
+    </script>
+
+{% endblock %}

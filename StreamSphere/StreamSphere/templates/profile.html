@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="profile-container">
+    
+    <div class="profile-header">
+        <div class="profile-cover"></div>
+        <div class="profile-info">
+            <div class="profile-avatar">
+                <img src="{{ url_for('serve_profile_pic', file_id=user.profile_pic_id) if user.profile_pic_id else url_for('static', filename='default-avatar.png') }}" 
+                     alt="{{ user.username }}" 
+                     id="profileImage">
+                {% if current_user.is_authenticated and current_user.id == user.id %}
+                <div class="upload-overlay">
+                    <input type="file" id="profilePicInput" accept="image/*" onchange="uploadProfilePic(event)">
+                    <label for="profilePicInput">
+                        <i class="fas fa-camera"></i>
+                    </label>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="profile-details">
+                <h1>{{ user.username }}</h1>
+                <p class="bio">{{ user.bio or 'No bio yet' }}</p>
+                <div class="profile-stats">
+                    <span><i class="fas fa-video"></i> {{ videos|length }} Videos</span>
+                    <span><i class="fas fa-heart"></i> {{ total_likes }} Likes</span>
+                    <span><i class="fas fa-calendar"></i> Joined {{ user.user_data.created_at.strftime('%B %Y') }}</span>
+                </div>
+                {% if current_user.is_authenticated and current_user.id == user.id %}
+                <button class="edit-profile-btn" onclick="openEditProfileModal()">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="profile-tabs">
+        <button class="tab-btn active" data-tab="videos">Videos</button>
+        
+    </div>
+
+    
+    <div class="tab-content active" id="videos-content">
+        <div class="video-grid">
+            {% for video in videos %}
+            <div class="video-card" data-video-id="{{ video._id }}">
+                <div class="thumbnail-container">
+                    <div class="video-wrapper">
+                        <video class="video-player" loop muted playsinline>
+                            <source src="{{ video.video_url }}" type="video/mp4">
+                        </video>
+                    </div>
+                    <div class="video-overlay">
+                        <div class="video-info">
+                            <h3>{{ video.title }}</h3>
+                            <div class="video-stats">
+                                <span><i class="fas fa-heart"></i> {{ video.likes }}</span>
+                                <span><i class="fas fa-comment"></i> {{ video.comments }}</span>
+                            </div>
+                            {% if current_user.is_authenticated and current_user.id == user.id %}
+                            <div class="video-actions">
+                                <button class="delete-btn" onclick="deleteVideo('{{ video._id }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+
+<div id="editProfileModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeEditProfileModal()">&times;</span>
+        <h2>Edit Profile</h2>
+        <form id="editProfileForm" onsubmit="updateProfile(event)">
+            <div class="input-group">
+                <input type="text" id="editUsername" value="{{ user.username }}" required>
+                <label for="editUsername">Username</label>
+            </div>
+            <div class="input-group">
+                <textarea id="editBio" rows="4">{{ user.bio or '' }}</textarea>
+                <label for="editBio">Bio</label>
+            </div>
+            <button type="submit" class="auth-btn">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.video-card').forEach(card => {
+    card.addEventListener('touchstart', () => {
+        const video = card.querySelector('video');
+        if (video.paused) {
+            video.play();
+        } else {
+            video.pause();
+            video.currentTime = 0;
+        }
+    });
+});
+
+function openEditProfileModal() {
+    document.getElementById('editProfileModal').style.display = 'block';
+}
+
+function closeEditProfileModal() {
+    document.getElementById('editProfileModal').style.display = 'none';
+}
+
+async function uploadProfilePic(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('profile_pic', file);
+
+    try {
+        const response = await fetch('/update_profile_pic', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('profileImage').src = data.image_url;
+            showNotification('Profile picture updated successfully', 'success');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+}
+
+async function deleteVideo(videoId) {
+    if (!confirm('Are you sure you want to delete this video?')) return;
+
+    try {
+        const response = await fetch(`/delete_video/${videoId}`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Video deleted successfully', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+}
+
+
+document.querySelectorAll('.video-card').forEach(card => {
+    const video = card.querySelector('video');
+    
+    card.addEventListener('mouseenter', () => {
+        video.play();
+    });
+    
+    card.addEventListener('mouseleave', () => {
+        video.pause();
+        video.currentTime = 0;
+    });
+});
+
+document.getElementById('profilePicInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('profile_pic', file);
+
+    try {
+        const response = await fetch('/update_profile_pic', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById('profileImage').src = data.image_url;
+            showNotification('Profile picture updated successfully', 'success');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+});
+
+
+</script>
+{% endblock %}

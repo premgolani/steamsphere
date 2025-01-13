@@ -1,0 +1,6 @@
+flask-login
+flask-pymongo
+flask
+cloudinary
+Werkzeug
+bson

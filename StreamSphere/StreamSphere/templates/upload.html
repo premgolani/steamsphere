@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="upload-container">
+    <div class="upload-card">
+        <h2>Upload New Stream</h2>
+        <form id="uploadForm" class="upload-form">
+            <div class="form-group">
+                <label for="file" class="upload-label">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span id="fileLabel">Choose Video</span>
+                </label>
+                <input type="file" id="file" name="file" accept="video/*" required>
+            </div>
+            <div class="form-group">
+                <input type="text" name="title" placeholder="Add a caption..." required>
+            </div>
+            <button type="submit" class="upload-btn">
+                <span class="btn-text">Post Reel</span>
+                <div class="loader" style="display: none;"></div>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const submitBtn = form.querySelector('.upload-btn');
+    const btnText = submitBtn.querySelector('.btn-text');
+    const loader = submitBtn.querySelector('.loader');
+    
+    try {
+        btnText.style.display = 'none';
+        loader.style.display = 'block';
+        submitBtn.disabled = true;
+
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Video uploaded successfully!', 'success');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1500);
+        } else {
+            throw new Error(data.error || 'Upload failed');
+        }
+    } catch (error) {
+        showNotification(error.message, 'error');
+        // Reset button state
+        btnText.style.display = 'block';
+        loader.style.display = 'none';
+        submitBtn.disabled = false;
+    }
+});
+
+document.getElementById('file').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || 'Choose Video';
+    document.getElementById('fileLabel').textContent = fileName;
+});
+</script>
+{% endblock %}

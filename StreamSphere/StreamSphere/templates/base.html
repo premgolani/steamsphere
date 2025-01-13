@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamSphere</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleMenu()">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div class="wrapper">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="StreamSphere" class="logo">
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'creator' %}
+                    <li><a href="/upload"><i class="fas fa-upload"></i> Upload</a></li>
+                    {% endif %}
+                    <li><a href="/profile"><i class="fas fa-user"></i> Profile</a></li>
+                    <li><a href="#" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                {% else %}
+                    <li><a href="#" onclick="openAuthModal('login'); return false;"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+                    <li><a href="#" onclick="openAuthModal('register'); return false;"><i class="fas fa-user-plus"></i> Register</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        <div class="main-content">
+            <header class="top-bar">
+                <div class="search-bar">
+                    <h3>StreamSphere</h3>
+                </div>
+                {% if current_user.is_authenticated %}
+                <div class="user-menu">
+                    <img src="{{ url_for('serve_profile_pic', file_id=current_user.profile_pic_id) if current_user.profile_pic_id else url_for('static', filename='default-avatar.png') }}" 
+                    alt="Profile" 
+                    class="avatar">
+                    <span>{{ current_user.username }}</span>
+                </div>
+                {% endif %}
+            </header>
+
+            <main class="content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+<div class="auth-modal" id="authModal">
+    <div class="auth-container">
+        <div class="auth-image">
+            <img src="{{ url_for('static', filename='login.png') }}" alt="Authentication">
+        </div>
+        <div class="auth-form">
+            <button class="close-auth" onclick="closeAuthModal()">×</button>
+            <h2 id="authTitle">Login</h2>
+            <form id="authForm" onsubmit="handleAuth(event)">
+                <div class="input-group">
+                    <input type="text" id="username" required placeholder=" ">
+                    <label for="username">Username</label>
+                </div>
+                <div class="input-group">
+                    <input type="password" id="password" required placeholder=" ">
+                    <label for="password">Password</label>
+                </div>
+                <div id="roleGroup" style="display: none;">
+                    <div class="input-group">
+                        <select id="role" required>
+                            <option value="user">User</option>
+                            <option value="creator">Creator</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="auth-btn">Login</button>
+                <div class="auth-links">
+                    <p class="switch-auth">
+                        Not registered? <a href="#" onclick="toggleAuthMode()">Sign up</a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleMenu() {
+        const sidebar = document.querySelector('.sidebar');
+        sidebar.classList.toggle('active');
+    }
+
+    
+    document.addEventListener('click', (e) => {
+        const sidebar = document.querySelector('.sidebar');
+        const menuToggle = document.querySelector('.menu-toggle');
+        if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+function handleLogout() {
+    fetch('/logout')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Logged out successfully', 'success');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+            } else {
+                throw new Error(data.error || 'Logout failed');
+            }
+        })
+        .catch(error => {
+            console.error('Logout error:', error);
+            showNotification('Logout failed: ' + error.message, 'error');
+        });
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }, 100);
+}
+    </script>
+
+<script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</body>
+</html>
